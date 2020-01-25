@@ -5,12 +5,14 @@ import (
 	"encoding/gob"
 	"github.com/mohemohe/temple"
 	"log"
+	"math"
 	"math/rand"
 	"os"
 	"plugin"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type (
@@ -22,10 +24,10 @@ type (
 		Text string
 	}
 	S struct {
-		Enable bool
-		HP   int
+		Enable  bool
+		HP      int
 		Rebirth int
-		Last string
+		Last    time.Time
 	}
 )
 
@@ -34,6 +36,8 @@ var ch *chan M
 
 const maxHP = 100
 const maxDamage = 10
+const heal = 10
+
 var re *regexp.Regexp
 
 func Boot(s *plugin.Plugin, c *chan M) {
@@ -98,18 +102,23 @@ func pack(msg M) P {
 	}
 }
 
+func storeKey(pack P) string {
+	return "lxbot_socialquest_" + pack.Room + "_" + pack.ID
+}
+
 func current(pack P) S {
 	en := false
 	hp := maxHP
 	bi := 0
+	l := time.Now()
 
-	k := storeKey(pack)+"_enable"
+	k := storeKey(pack) + "_enable"
 	s := get(k)
 	if s != nil {
 		en = s.(bool)
 	}
 
-	k = storeKey(pack)+"_hp"
+	k = storeKey(pack) + "_hp"
 	h := get(k)
 	if h != nil {
 		switch h.(type) {
@@ -120,7 +129,7 @@ func current(pack P) S {
 		}
 	}
 
-	k = storeKey(pack)+"_rebirth"
+	k = storeKey(pack) + "_rebirth"
 	b := get(k)
 	if b != nil {
 		switch h.(type) {
@@ -131,26 +140,37 @@ func current(pack P) S {
 		}
 	}
 
+	k = storeKey(pack) + "_last"
+	t := get(k)
+	if t != nil {
+		p, err := time.Parse(time.RFC3339, t.(string))
+		if err != nil {
+			log.Println(err)
+		} else {
+			l = p
+		}
+	}
+
 	return S{
 		Enable:  en,
 		HP:      hp,
 		Rebirth: bi,
+		Last:    l,
 	}
 }
 
 func update(pack P, next S) {
-	k := storeKey(pack)+"_enable"
+	k := storeKey(pack) + "_enable"
 	set(k, next.Enable)
 
-	k = storeKey(pack)+"_hp"
+	k = storeKey(pack) + "_hp"
 	set(k, next.HP)
 
-	k = storeKey(pack)+"_rebirth"
+	k = storeKey(pack) + "_rebirth"
 	set(k, next.Rebirth)
-}
 
-func storeKey(pack P) string {
-	return "lxbot_socialquest_"+pack.Room+"_"+pack.ID
+	k = storeKey(pack) + "_last"
+	set(k, next.Last.Format(time.RFC3339))
 }
 
 func handleInternal(msg M) string {
@@ -169,7 +189,7 @@ func handleInternal(msg M) string {
 		case "status":
 			return status(pk)
 		case "reincarnation":
-			return p+"社会 reincarnation [auto|manual|status]"
+			return p + "社会 reincarnation [auto|manual|status]"
 		}
 	}
 	if l == 3 && args[1] == "reincarnation" {
@@ -182,45 +202,45 @@ func handleInternal(msg M) string {
 			return rebirthStatus(pk)
 		}
 	}
-	return p+"社会 [register|unregister|status|reincarnation]"
+	return p + "社会 [register|unregister|status|reincarnation]"
 }
 
 func register(p P) string {
 	c := current(p)
 	if c.Enable {
-		return p.Name+"は既に社会に参加しています。 残りHP: "+strconv.Itoa(c.HP)+"/"+strconv.Itoa(maxHP)+" 転生回数: "+strconv.Itoa(c.Rebirth)
+		return p.Name + "は既に社会に参加しています。 残りHP: " + strconv.Itoa(c.HP) + "/" + strconv.Itoa(maxHP) + " 転生回数: " + strconv.Itoa(c.Rebirth)
 	}
 
 	update(p, S{
-		Enable: true,
-		HP: c.HP,
+		Enable:  true,
+		HP:      c.HP,
 		Rebirth: c.Rebirth,
 	})
 
-	return p.Name+"は社会に参加しました。つよく生きましょう。 残りHP: "+strconv.Itoa(c.HP)+"/"+strconv.Itoa(maxHP)+" 転生回数: "+strconv.Itoa(c.Rebirth)
+	return p.Name + "は社会に参加しました。つよく生きましょう。 残りHP: " + strconv.Itoa(c.HP) + "/" + strconv.Itoa(maxHP) + " 転生回数: " + strconv.Itoa(c.Rebirth)
 }
 
 func unregister(p P) string {
 	c := current(p)
 	if !c.Enable {
-		return p.Name+"は既に社会から離脱しています。"
+		return p.Name + "は既に社会から離脱しています。"
 	}
 
 	update(p, S{
-		Enable: false,
-		HP: c.HP,
+		Enable:  false,
+		HP:      c.HP,
 		Rebirth: c.Rebirth,
 	})
 
-	return p.Name+"は社会から離脱しました。来世もがんばりましょう。"
+	return p.Name + "は社会から離脱しました。来世もがんばりましょう。"
 }
 
 func status(p P) string {
 	c := current(p)
 	if c.Enable {
-		return p.Name+"は社会に参加しています。 残りHP: "+strconv.Itoa(c.HP)+"/"+strconv.Itoa(maxHP)+" 転生回数: "+strconv.Itoa(c.Rebirth)
+		return p.Name + "は社会に参加しています。 残りHP: " + strconv.Itoa(c.HP) + "/" + strconv.Itoa(maxHP) + " 転生回数: " + strconv.Itoa(c.Rebirth)
 	}
-	return p.Name+"は社会に参加していません。"
+	return p.Name + "は社会に参加していません。"
 }
 
 func autoRebirth(p P) string {
@@ -242,19 +262,32 @@ func handleSocial(msg M) {
 		return
 	}
 
-	// TODO: HP回復
-
 	l, d := calcDamage(p.Text)
 	if l == 0 {
 		return
 	}
 
-	nhp := c.HP - d
+	nhp := c.HP
+
+	now := time.Now()
+	today, _ := time.Parse("20060102", now.Format("20060102"))
+	diff := today.Sub(c.Last)
+	days := int(math.Floor(diff.Hours() / 24))
+	if days > 0 {
+		nhp += heal * days
+		if nhp > maxHP {
+			nhp = maxHP
+		}
+		sendAsync(msg, "宿屋で"+strconv.Itoa(days)+"日休みました。 残りHP: "+strconv.Itoa(c.HP)+"/"+strconv.Itoa(maxHP)+" -> "+strconv.Itoa(nhp)+"/"+strconv.Itoa(maxHP))
+	}
+
+	nhp = c.HP - d
 
 	update(p, S{
-		Enable: true,
-		HP: nhp,
+		Enable:  true,
+		HP:      nhp,
 		Rebirth: c.Rebirth,
+		Last: today,
 	})
 
 	tt := "こうげき！"
@@ -264,16 +297,28 @@ func handleSocial(msg M) {
 	if l > 2 {
 		tt = "れんぞくこうげき！"
 	}
-	dt := "に"+strconv.Itoa(d)+"のダメージ！"
-	if l == 0 {
+	dt := "に" + strconv.Itoa(d) + "のダメージ！"
+	if l == 0 || d == 0 {
 		dt = "はひらりと身をかわした！"
 	}
 
 	sendAsync(msg, "社会の"+tt+" "+p.Name+dt+" 残りHP: "+strconv.Itoa(nhp))
+
+	if nhp <= 0 {
+		sendAsync(msg, p.Name+"は社会の荒波に打ち勝てませんでした。")
+		update(p, S{
+			Enable:  false,
+			HP:      nhp,
+			Rebirth: c.Rebirth + 1,
+			Last: today,
+		})
+	}
+
+	// TODO: 自動転生
 }
 
 func calcDamage(text string) (int, int) {
-	r := re.FindAllString(text ,-1)
+	r := re.FindAllString(text, -1)
 	l := len(r)
 	return l, rand.Intn(maxDamage) * l
 }
