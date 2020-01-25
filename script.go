@@ -211,10 +211,19 @@ func register(p P) string {
 		return p.Name + "は既に社会に参加しています。 残りHP: " + strconv.Itoa(c.HP) + "/" + strconv.Itoa(maxHP) + " 転生回数: " + strconv.Itoa(c.Rebirth)
 	}
 
+	nhp := c.HP
+	if nhp <= 0 {
+		nhp = maxHP
+	}
+
+	now := time.Now()
+	today, _ := time.Parse("20060102", now.Format("20060102"))
+
 	update(p, S{
 		Enable:  true,
-		HP:      c.HP,
+		HP:      nhp,
 		Rebirth: c.Rebirth,
+		Last:    today,
 	})
 
 	return p.Name + "は社会に参加しました。つよく生きましょう。 残りHP: " + strconv.Itoa(c.HP) + "/" + strconv.Itoa(maxHP) + " 転生回数: " + strconv.Itoa(c.Rebirth)
@@ -230,6 +239,7 @@ func unregister(p P) string {
 		Enable:  false,
 		HP:      c.HP,
 		Rebirth: c.Rebirth,
+		Last:    c.Last,
 	})
 
 	return p.Name + "は社会から離脱しました。来世もがんばりましょう。"
