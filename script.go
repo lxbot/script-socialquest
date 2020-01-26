@@ -27,6 +27,7 @@ type (
 		Enable  bool
 		HP      int
 		Rebirth int
+		Auto    bool
 		Last    time.Time
 	}
 )
@@ -110,6 +111,7 @@ func current(pack P) S {
 	en := false
 	hp := maxHP
 	bi := 0
+	au := false
 	l := time.Now()
 
 	k := storeKey(pack) + "_enable"
@@ -140,6 +142,12 @@ func current(pack P) S {
 		}
 	}
 
+	k = storeKey(pack) + "_auto"
+	a := get(k)
+	if a != nil {
+		au = a.(bool)
+	}
+
 	k = storeKey(pack) + "_last"
 	t := get(k)
 	if t != nil {
@@ -155,6 +163,7 @@ func current(pack P) S {
 		Enable:  en,
 		HP:      hp,
 		Rebirth: bi,
+		Auto:    au,
 		Last:    l,
 	}
 }
@@ -168,6 +177,9 @@ func update(pack P, next S) {
 
 	k = storeKey(pack) + "_rebirth"
 	set(k, next.Rebirth)
+
+	k = storeKey(pack) + "_auto"
+	set(k, next.Auto)
 
 	k = storeKey(pack) + "_last"
 	set(k, next.Last.Format(time.RFC3339))
@@ -223,6 +235,7 @@ func register(p P) string {
 		Enable:  true,
 		HP:      nhp,
 		Rebirth: c.Rebirth,
+		Auto:    c.Auto,
 		Last:    today,
 	})
 
@@ -239,6 +252,7 @@ func unregister(p P) string {
 		Enable:  false,
 		HP:      c.HP,
 		Rebirth: c.Rebirth,
+		Auto:    c.Auto,
 		Last:    c.Last,
 	})
 
@@ -254,15 +268,35 @@ func status(p P) string {
 }
 
 func autoRebirth(p P) string {
-	return "autoRebirth dummy"
+	c := current(p)
+	if c.Auto {
+		return p.Name + "の自動転生は既に有効です。"
+	}
+
+	c.Auto = true
+	update(p, c)
+
+	return p.Name + "の自動転生を有効にしました。油断せずに生きましょう。"
 }
 
 func manualRebirth(p P) string {
-	return "manualRebirth dummy"
+	c := current(p)
+	if !c.Auto {
+		return p.Name + "の自動転生は既に無効です。"
+	}
+
+	c.Auto = false
+	update(p, c)
+
+	return p.Name + "の自動転生を有効にしました。命を大事にしましょう。"
 }
 
 func rebirthStatus(p P) string {
-	return "rebirthStatus dummy"
+	c := current(p)
+	if c.Auto {
+		return p.Name + "の自動転生は有効です。"
+	}
+	return p.Name + "の自動転生は無効です。"
 }
 
 func handleSocial(msg M) {
@@ -297,6 +331,7 @@ func handleSocial(msg M) {
 		Enable:  true,
 		HP:      nhp,
 		Rebirth: c.Rebirth,
+		Auto:    c.Auto,
 		Last: today,
 	})
 
@@ -316,15 +351,21 @@ func handleSocial(msg M) {
 
 	if nhp <= 0 {
 		sendAsync(msg, p.Name+"は社会の荒波に打ち勝てませんでした。")
+		if c.Auto {
+			nhp = maxHP
+			sendAsync(msg, "温かい光が"+p.Name+"の体を包み込んだ。 残りHP: " + strconv.Itoa(nhp) + "/" + strconv.Itoa(maxHP) + " 転生回数: " + strconv.Itoa(c.Rebirth+1))
+		}
+
+		// FIXME: 本当はここで転生回数を+1してはいけない
+		// HACK: status的には表示されないからセーフ
 		update(p, S{
-			Enable:  false,
+			Enable:  c.Auto,
 			HP:      nhp,
 			Rebirth: c.Rebirth + 1,
+			Auto:    c.Auto,
 			Last: today,
 		})
 	}
-
-	// TODO: 自動転生
 }
 
 func calcDamage(text string) (int, int) {
@@ -335,11 +376,9 @@ func calcDamage(text string) (int, int) {
 
 func sendAsync(msg M, text string) {
 	m, _ := deepCopy(msg)
-	go func() {
-		m["mode"] = "reply"
-		m["message"].(M)["text"] = text
-		*ch <- m
-	}()
+	m["mode"] = "reply"
+	m["message"].(M)["text"] = text
+	*ch <- m
 }
 
 func get(key string) interface{} {
