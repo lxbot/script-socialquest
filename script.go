@@ -324,7 +324,7 @@ func handleSocial(msg M) {
 		if nhp > maxHP {
 			nhp = maxHP
 		}
-		sendAsync(msg, "宿屋で"+strconv.Itoa(days)+"日休みました。 残りHP: "+strconv.Itoa(c.HP)+"/"+strconv.Itoa(maxHP)+" -> "+strconv.Itoa(nhp)+"/"+strconv.Itoa(maxHP))
+		心ioの気持ちになってsend(msg, "宿屋で"+strconv.Itoa(days)+"日休みました。 残りHP: "+strconv.Itoa(c.HP)+"/"+strconv.Itoa(maxHP)+" -> "+strconv.Itoa(nhp)+"/"+strconv.Itoa(maxHP))
 	}
 
 	nhp = c.HP - d
@@ -349,13 +349,13 @@ func handleSocial(msg M) {
 		dt = "はひらりと身をかわした！"
 	}
 
-	sendAsync(msg, "社会の"+tt+" "+p.Name+dt+" 残りHP: "+strconv.Itoa(nhp))
+	心ioの気持ちになってsend(msg, "社会の"+tt+" "+p.Name+dt+" 残りHP: "+strconv.Itoa(c.HP)+"/"+strconv.Itoa(maxHP)+" -> "+strconv.Itoa(nhp)+"/"+strconv.Itoa(maxHP))
 
 	if nhp <= 0 {
-		sendAsync(msg, p.Name+"は社会の荒波に打ち勝てませんでした。")
+		心ioの気持ちになってsend(msg, p.Name+"は社会の荒波に打ち勝てませんでした。")
 		if c.Auto {
 			nhp = maxHP
-			sendAsync(msg, "温かい光が"+p.Name+"の体を包み込んだ。 残りHP: " + strconv.Itoa(nhp) + "/" + strconv.Itoa(maxHP) + " 転生回数: " + strconv.Itoa(c.Rebirth+1))
+			心ioの気持ちになってsend(msg, "温かい光が"+p.Name+"の体を包み込んだ。 残りHP: "+strconv.Itoa(nhp)+"/"+strconv.Itoa(maxHP)+" 転生回数: "+strconv.Itoa(c.Rebirth+1))
 		}
 
 		// FIXME: 本当はここで転生回数を+1してはいけない
@@ -376,11 +376,12 @@ func calcDamage(text string) (int, int) {
 	return l, (int)(mt19937.DistInt64(mt, 0, int64(maxDamage * l)).Int64())
 }
 
-func sendAsync(msg M, text string) {
+func 心ioの気持ちになってsend(msg M, text string) {
 	m, _ := deepCopy(msg)
 	m["mode"] = "reply"
 	m["message"].(M)["text"] = text
 	*ch <- m
+	time.Sleep(250 * time.Millisecond)
 }
 
 func get(key string) interface{} {
