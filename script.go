@@ -3,10 +3,10 @@ package main
 import (
 	"bytes"
 	"encoding/gob"
+	"github.com/k-lee9575/mt19937"
 	"github.com/mohemohe/temple"
 	"log"
 	"math"
-	"math/rand"
 	"os"
 	"plugin"
 	"regexp"
@@ -39,6 +39,7 @@ const maxHP = 100
 const maxDamage = 10
 const heal = 10
 
+var mt *mt19937.MT19937
 var re *regexp.Regexp
 
 func Boot(s *plugin.Plugin, c *chan M) {
@@ -48,6 +49,7 @@ func Boot(s *plugin.Plugin, c *chan M) {
 	gob.Register(M{})
 	gob.Register([]interface{}{})
 
+	mt = mt19937.New()
 	re = regexp.MustCompile("疲|苦|眠|怠|突|痛|つかれ[たてす]?|ひろう|だる[いくす]?|つら[いくす]?|ねむ[いくす]?|しんど[いくす]?|くるし[いくす]?|いた[いくす]|tukare|ｔｕｋａｒｅ|tsukare|ｔｓｕｋａｒｅ|tire|ｔｉｒｅ|tiring|ｔｉｒｉｎｇ|ちれ|たいや|タイヤ|たれかつ|タレかつ|タレカツ|たれカツ")
 }
 
@@ -332,7 +334,7 @@ func handleSocial(msg M) {
 		HP:      nhp,
 		Rebirth: c.Rebirth,
 		Auto:    c.Auto,
-		Last: today,
+		Last:    today,
 	})
 
 	tt := "こうげき！"
@@ -363,7 +365,7 @@ func handleSocial(msg M) {
 			HP:      nhp,
 			Rebirth: c.Rebirth + 1,
 			Auto:    c.Auto,
-			Last: today,
+			Last:    today,
 		})
 	}
 }
@@ -371,7 +373,7 @@ func handleSocial(msg M) {
 func calcDamage(text string) (int, int) {
 	r := re.FindAllString(text, -1)
 	l := len(r)
-	return l, rand.Intn(maxDamage) * l
+	return l, (int)(mt19937.DistInt64(mt, 0, int64(maxDamage * l)).Int64())
 }
 
 func sendAsync(msg M, text string) {
