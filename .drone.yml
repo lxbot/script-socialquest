@@ -10,7 +10,7 @@ steps:
   - name: docker
     image: plugins/docker
     settings:
-      repo: lxbot/script-docker
+      repo: lxbot/script-socialquest
       username:
         from_secret: dockerhub_username
       password:
