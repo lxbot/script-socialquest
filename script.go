@@ -314,6 +314,7 @@ func handleSocial(msg M) {
 	}
 
 	nhp := c.HP
+	nbhp := c.HP
 
 	now := time.Now()
 	today, _ := time.Parse("20060102", now.Format("20060102"))
@@ -324,6 +325,7 @@ func handleSocial(msg M) {
 		if nhp > maxHP {
 			nhp = maxHP
 		}
+		nbhp = nhp
 		心ioの気持ちになってsend(msg, "宿屋で"+strconv.Itoa(days)+"日休みました。 残りHP: "+strconv.Itoa(c.HP)+"/"+strconv.Itoa(maxHP)+" -> "+strconv.Itoa(nhp)+"/"+strconv.Itoa(maxHP))
 	}
 
@@ -349,7 +351,7 @@ func handleSocial(msg M) {
 		dt = "はひらりと身をかわした！"
 	}
 
-	心ioの気持ちになってsend(msg, "社会の"+tt+" "+p.Name+dt+" 残りHP: "+strconv.Itoa(c.HP)+"/"+strconv.Itoa(maxHP)+" -> "+strconv.Itoa(nhp)+"/"+strconv.Itoa(maxHP))
+	心ioの気持ちになってsend(msg, "社会の"+tt+" "+p.Name+dt+" 残りHP: "+strconv.Itoa(nbhp)+"/"+strconv.Itoa(maxHP)+" -> "+strconv.Itoa(nhp)+"/"+strconv.Itoa(maxHP))
 
 	if nhp <= 0 {
 		心ioの気持ちになってsend(msg, p.Name+"は社会の荒波に打ち勝てませんでした。")
