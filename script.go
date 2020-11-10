@@ -327,7 +327,7 @@ func handleSocial(msg M) {
 		心ioの気持ちになってsend(msg, "宿屋で"+strconv.Itoa(days)+"日休みました。 残りHP: "+strconv.Itoa(c.HP)+"/"+strconv.Itoa(maxHP)+" -> "+strconv.Itoa(nhp)+"/"+strconv.Itoa(maxHP))
 	}
 
-	nhp = c.HP - d
+	nhp -= d
 
 	update(p, S{
 		Enable:  true,
